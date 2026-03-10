@@ -1,8 +1,9 @@
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Depends
 from typing import Optional
 from dotenv import load_dotenv
 import os
 import jwt
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 load_dotenv()
 
@@ -10,6 +11,8 @@ app = FastAPI()
 
 API_KEY = os.getenv("API_KEY")
 JWT_SECRET = os.getenv("JWT_SECRET")
+
+bearer_scheme = HTTPBearer()
 
 MESSAGES = [
     {"id": 1, "user_id": 1, "text": "Welcome to the platform!"},
@@ -34,11 +37,8 @@ def protected_secret(x_api_key: Optional[str] = Header(default=None)):
 
 
 @app.get("/messages")
-def protected_messages(authorization: Optional[str] = Header(default=None)):
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
-
-    token = authorization.split(" ", 1)[1]
+def protected_messages(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
+    token = credentials.credentials
 
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
